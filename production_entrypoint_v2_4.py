@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -20,6 +21,9 @@ if os.geteuid() == 0:
         pass
     os.setgid(GID)
     os.setuid(UID)
+
+if os.environ.get('SHISHA_BACKUP_ENABLED', 'false').strip().lower() in {'1', 'true', 'yes'}:
+    subprocess.Popen([sys.executable, '/app/production_backup_worker_v2_5.py'])
 
 port = os.environ.get('PORT', '8789')
 auth_mode = os.environ.get('SHISHA_AUTH_MODE', 'local-bearer').strip().lower()
