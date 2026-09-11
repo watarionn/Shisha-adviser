@@ -4,6 +4,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY staging_bundle /tmp/staging_bundle
 COPY staging_persistence_canary.py /app/staging_persistence_canary.py
+COPY staging_remote_e2e_v2_1.py /app/staging_remote_e2e_v2_1.py
 COPY staging_entrypoint.py /app/staging_entrypoint.py
 RUN cat \
  /tmp/staging_bundle/00a.b64 /tmp/staging_bundle/00b.b64 \
