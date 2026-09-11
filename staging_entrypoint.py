@@ -21,6 +21,9 @@ if os.geteuid() == 0:
     os.setuid(UID)
 
 subprocess.run([sys.executable, '/app/staging_persistence_canary.py'], check=True)
+if os.environ.get('STAGING_E2E_TOKEN'):
+    subprocess.run([sys.executable, '/app/staging_remote_e2e_v2_1.py'], check=True)
+
 port = os.environ.get('PORT', '8789')
 os.execv(sys.executable, [
     sys.executable,
