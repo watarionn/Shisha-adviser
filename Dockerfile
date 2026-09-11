@@ -5,6 +5,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY staging_bundle /tmp/staging_bundle
 COPY staging_persistence_canary.py /app/staging_persistence_canary.py
 COPY staging_remote_e2e_v2_1.py /app/staging_remote_e2e_v2_1.py
+COPY staging_rc_validation_v2_3.py /app/staging_rc_validation_v2_3.py
+COPY apply_rc_v2_3_patch.py /app/apply_rc_v2_3_patch.py
 COPY staging_entrypoint.py /app/staging_entrypoint.py
 RUN cat \
  /tmp/staging_bundle/00a.b64 /tmp/staging_bundle/00b.b64 \
@@ -17,6 +19,7 @@ RUN cat \
  /tmp/staging_bundle/07a.b64 /tmp/staging_bundle/07b.b64 /tmp/staging_bundle/07c.b64 \
  > /tmp/staging_source_bundle.b64 \
  && python -c "import base64,hashlib,io,pathlib,zipfile; txt=pathlib.Path('/tmp/staging_source_bundle.b64').read_text(); raw=base64.b64decode(txt,validate=True); actual=hashlib.sha256(raw).hexdigest(); expected='8795b3b80a147e3107e0844fbcab777fbd7308ab4f06cf7f54e2d21148c6e4a2'; assert actual==expected,(actual,expected); z=zipfile.ZipFile(io.BytesIO(raw)); assert z.testzip() is None; z.extractall('/app')" \
+ && python /app/apply_rc_v2_3_patch.py \
  && rm -rf /tmp/staging_bundle /tmp/staging_source_bundle.b64 \
  && useradd --uid 10001 --create-home shisha \
  && mkdir -p /tmp/shisha \
