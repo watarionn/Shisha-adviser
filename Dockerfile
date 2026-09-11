@@ -8,6 +8,7 @@ COPY staging_remote_e2e_v2_1.py /app/staging_remote_e2e_v2_1.py
 COPY staging_rc_validation_v2_3.py /app/staging_rc_validation_v2_3.py
 COPY apply_rc_v2_3_patch.py /app/apply_rc_v2_3_patch.py
 COPY production_hardening_patch_v2_4.py /app/production_hardening_patch_v2_4.py
+COPY production_backup_worker_v2_5.py /app/production_backup_worker_v2_5.py
 COPY production_entrypoint_v2_4.py /app/production_entrypoint_v2_4.py
 RUN cat \
  /tmp/staging_bundle/00a.b64 /tmp/staging_bundle/00b.b64 \
