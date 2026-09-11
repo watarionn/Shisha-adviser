@@ -3,6 +3,7 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY staging_bundle /tmp/staging_bundle
+COPY staging_persistence_canary.py /app/staging_persistence_canary.py
 RUN cat \
  /tmp/staging_bundle/00a.b64 /tmp/staging_bundle/00b.b64 \
  /tmp/staging_bundle/01a1.b64 /tmp/staging_bundle/01a2.b64 /tmp/staging_bundle/01b1.b64 /tmp/staging_bundle/01b2.b64 \
@@ -20,4 +21,4 @@ RUN cat \
  && chown -R shisha:shisha /tmp/shisha /app
 USER 10001
 ENV PYTHONUNBUFFERED=1
-CMD ["sh","-c","python shisha_hardened_service_v1_7.py --base-dir /app --db /tmp/shisha/shisha_advisor.db --auth-mode local-bearer --rate-limit 60 --rate-window-seconds 60 --log-path /tmp/shisha/service.jsonl --host 0.0.0.0 --port ${PORT:-8789}"]
+CMD ["sh","-c","python staging_persistence_canary.py && python shisha_hardened_service_v1_7.py --base-dir /app --db /tmp/shisha/shisha_advisor.db --auth-mode local-bearer --rate-limit 60 --rate-window-seconds 60 --log-path /tmp/shisha/service.jsonl --host 0.0.0.0 --port ${PORT:-8789}"]
