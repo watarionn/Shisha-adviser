@@ -230,6 +230,10 @@ def main():
         verify_existing(store, report)
     else:
         run_new(store)
+    if os.environ.get("STAGING_E2E_REVOKE_AFTER_VALIDATE") == "1":
+        with store.connect() as con:
+            con.execute("UPDATE principals SET is_active=0 WHERE principal_id=?", (PRINCIPAL_ID,))
+        emit("CREDENTIAL_REVOKED", principal_id=PRINCIPAL_ID)
 
 
 if __name__ == "__main__":
