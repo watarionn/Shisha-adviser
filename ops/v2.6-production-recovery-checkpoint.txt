@@ -1,0 +1,3 @@
+v2.6 production recovery checkpoint
+Purpose: trigger a normal GitHub-to-Railway deployment after restoring the known-good production start command.
+No credentials. No data migration. No public domain change.
