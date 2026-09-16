@@ -43,7 +43,7 @@ port = os.environ.get('PORT', '8789')
 auth_mode = os.environ.get('SHISHA_AUTH_MODE', 'local-bearer').strip().lower()
 args = [
     sys.executable,
-    '/app/production_public_web_v3_0.py',
+    '/app/production_public_web_v3_0_2.py',
     '--base-dir', '/app',
     '--db', str(MOUNT / 'shisha_advisor.db'),
     '--auth-mode', auth_mode,
