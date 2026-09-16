@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 from shisha_backup_v1_6 import create_backup, verify_backup
@@ -32,12 +33,17 @@ def _cfg():
 
 
 def _client(cfg):
+    compatibility = Config(
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    )
     return boto3.client(
         "s3",
         endpoint_url=cfg["endpoint"],
         aws_access_key_id=cfg["access_key"],
         aws_secret_access_key=cfg["secret_key"],
         region_name=cfg["region"],
+        config=compatibility,
     )
 
 
@@ -59,6 +65,8 @@ def _emit_safe_credential_shape(cfg):
         access_id_has_edge_whitespace=access_id != access_id.strip(),
         secret_length=len(secret),
         secret_has_edge_whitespace=secret != secret.strip(),
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
         secret_value_logged=False,
     )
 
