@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shisha Advisor</title>
+  <meta name="description" content="Shisha Advisor は、シーシャのフレーバー情報を整理し、好みや条件に合わせた組み合わせを考えるためのアドバイザーです。">
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { max-width: 760px; margin: 0 auto; padding: 40px 20px 64px; line-height: 1.75; }
+    header, section, footer { margin-bottom: 40px; }
+    h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+    h2 { font-size: 1.25rem; margin-top: 2rem; }
+    .lead { font-size: 1.08rem; }
+    nav a, footer a { margin-right: 1rem; }
+    .note { padding: 1rem; border: 1px solid currentColor; border-radius: 10px; opacity: .9; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Shisha Advisor</h1>
+    <p class="lead">シーシャのフレーバー情報を整理し、好みや条件に合わせて組み合わせを考えるためのアドバイザーです。</p>
+    <nav aria-label="関連ページ">
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="terms.html">利用条件</a>
+    </nav>
+  </header>
+
+  <main>
+    <section>
+      <h2>できること</h2>
+      <p>Shisha Advisor は、フレーバーの特徴や分類などの情報をもとに、ユーザーが候補を探したり、組み合わせを検討したりすることを支援します。</p>
+      <p>本サービスが提示する内容は嗜好の整理や候補検討を支援するための情報であり、健康上の安全性を保証するものではありません。</p>
+    </section>
+
+    <section>
+      <h2>Google ログインを使う理由</h2>
+      <p>公開版では、アカウントを安全に識別し、ユーザーごとのサービス利用を適切に分離するために Google OpenID Connect によるログインを利用します。</p>
+      <p>Google ログインは認証目的に限定します。Shisha Advisor の本番バックアップ処理はサービス側の独立したストレージ経路で行い、ユーザーの Google Drive へのアクセス権限をバックアップ目的で要求しません。</p>
+    </section>
+
+    <section>
+      <h2>Google から利用する情報</h2>
+      <p>認証では、Google が発行する OpenID Connect の識別情報を使用します。公開時の最終設定では、サービスに必要な最小限のスコープだけを使用します。</p>
+      <div class="note">
+        <strong>方針:</strong> Google API の不要な権限を要求しません。特に、エンドユーザーの Google Drive へのアクセス権限を公開ログインに含めません。
+      </div>
+    </section>
+
+    <section>
+      <h2>プライバシー</h2>
+      <p>Google 認証情報をどのように利用・保持・共有するかについては、<a href="privacy.html">プライバシーポリシー</a>を確認してください。</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Shisha Advisor</p>
+    <a href="privacy.html">プライバシーポリシー</a>
+    <a href="terms.html">利用条件</a>
+  </footer>
+</body>
+</html>
