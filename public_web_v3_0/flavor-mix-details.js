@@ -7,6 +7,7 @@
     sweetness:'甘さ', cooling:'清涼感', acidity:'酸味', creaminess:'クリーミーさ',
     body:'ボディ感', spice_intensity:'スパイス感', floral_intensity:'フローラル感'
   };
+  const TRUSTED_CONFIDENCE = .45;
   let catalogPromise = null;
 
   function normalize(value){
@@ -76,7 +77,7 @@
     card.dataset.mixDetailLabel = row.mix_label || '';
     card.dataset.mixDetailComponents = JSON.stringify(components);
     const hint = card.querySelector('.flavor-detail-hint');
-    if(hint) hint.textContent = 'タップで各フレーバーの詳細を見る';
+    if(hint) hint.textContent = 'タップでMIX全体＋各フレーバーを見る';
   }
 
   function installRecommendationCapture(){
@@ -97,7 +98,7 @@
 
   function confidenceLabel(conf){
     if(conf >= .8) return '根拠強め';
-    if(conf >= .45) return '参考値';
+    if(conf >= TRUSTED_CONFIDENCE) return '参考値';
     return '推定値';
   }
 
@@ -123,7 +124,7 @@
     available.forEach((axis) => {
       const data = axes[axis];
       const row = el('div','flavor-axis');
-      if(Number(data.confidence || 0) < .45) row.classList.add('low-confidence');
+      if(Number(data.confidence || 0) < TRUSTED_CONFIDENCE) row.classList.add('low-confidence');
       row.appendChild(el('div','flavor-axis-name',AXIS_LABELS[axis] || axis));
       const track = el('div','flavor-axis-track');
       const fill = el('div','flavor-axis-fill');
@@ -134,6 +135,173 @@
       row.appendChild(el('div','flavor-axis-note',`${confidenceLabel(Number(data.confidence || 0))} · confidence ${Number(data.confidence || 0).toFixed(2)}`));
       parent.appendChild(row);
     });
+  }
+
+  function normalizeRatios(components){
+    const finite = components.map((component) => Number(component.ratio)).filter((ratio) => Number.isFinite(ratio) && ratio > 0);
+    const sum = finite.reduce((acc,ratio) => acc + ratio,0);
+    if(sum > 0){
+      return components.map((component) => ({...component,normalizedRatio:(Number(component.ratio) > 0 ? Number(component.ratio) / sum : 0)}));
+    }
+    const fallback = components.length ? 1 / components.length : 0;
+    return components.map((component) => ({...component,normalizedRatio:fallback}));
+  }
+
+  function aggregateMix(components,data){
+    const weightedComponents = normalizeRatios(components).map((component) => ({
+      component,
+      detail:lookup(data,component),
+    }));
+    const axes = {};
+
+    AXIS_ORDER.forEach((axis) => {
+      const trusted = weightedComponents.filter(({component,detail}) => {
+        const item = detail?.axes?.[axis];
+        return item && Number(item.confidence || 0) >= TRUSTED_CONFIDENCE && component.normalizedRatio > 0;
+      });
+      const coveredRatio = trusted.reduce((sum,{component}) => sum + component.normalizedRatio,0);
+      if(coveredRatio <= 0) return;
+
+      const value = trusted.reduce((sum,{component,detail}) => (
+        sum + component.normalizedRatio * Number(detail.axes[axis].value || 0)
+      ),0) / coveredRatio;
+      const evidenceConfidence = trusted.reduce((sum,{component,detail}) => (
+        sum + component.normalizedRatio * Number(detail.axes[axis].confidence || 0)
+      ),0) / coveredRatio;
+      const confidence = evidenceConfidence * coveredRatio;
+      axes[axis] = {
+        value:Math.max(0,Math.min(100,value)),
+        confidence:Math.max(0,Math.min(1,confidence)),
+        covered_ratio:coveredRatio,
+      };
+    });
+
+    const flavorNotes = [];
+    weightedComponents
+      .slice()
+      .sort((a,b) => b.component.normalizedRatio - a.component.normalizedRatio)
+      .forEach(({detail}) => {
+        (detail?.flavor_notes_ja || []).forEach((note) => {
+          if(note && !flavorNotes.includes(note)) flavorNotes.push(note);
+        });
+      });
+
+    return {axes,flavor_notes_ja:flavorNotes.slice(0,8),weightedComponents};
+  }
+
+  function axisPhrase(axis,value){
+    if(axis === 'sweetness'){
+      if(value >= 72) return 'しっかり甘め';
+      if(value >= 56) return 'ほどよく甘め';
+      if(value <= 34) return '甘さ控えめ';
+    }
+    if(axis === 'cooling'){
+      if(value >= 78) return 'かなりひんやり';
+      if(value >= 60) return 'ひんやり感あり';
+      if(value <= 28) return '冷涼感ひかえめ';
+    }
+    if(axis === 'acidity'){
+      if(value >= 68) return 'キュッと酸味強め';
+      if(value >= 52) return 'ほどよく酸味あり';
+    }
+    if(axis === 'creaminess'){
+      if(value >= 68) return 'クリーミー';
+      if(value <= 28) return 'クリーム感ひかえめ';
+    }
+    if(axis === 'body'){
+      if(value >= 70) return 'しっかりした味わい';
+      if(value <= 30) return '軽やか寄り';
+    }
+    if(axis === 'spice_intensity'){
+      if(value >= 62) return 'スパイス感あり';
+    }
+    if(axis === 'floral_intensity'){
+      if(value >= 62) return '華やかさあり';
+    }
+    return null;
+  }
+
+  function mixSummary(components,aggregate){
+    const weighted = aggregate.weightedComponents || [];
+    const sorted = weighted.slice().sort((a,b) => b.component.normalizedRatio - a.component.normalizedRatio);
+    const ratioIntro = (() => {
+      if(!sorted.length) return '';
+      const top = sorted[0];
+      const second = sorted[1];
+      if(second && top.component.normalizedRatio - second.component.normalizedRatio >= .12){
+        return `${top.component.name}を軸にした配合。`;
+      }
+      if(sorted.length === 2) return '2つのフレーバーをバランスよく重ねる配合。';
+      return '3つのフレーバーを重ねた配合。';
+    })();
+
+    const phrases = AXIS_ORDER
+      .map((axis) => {
+        const item = aggregate.axes?.[axis];
+        if(!item || Number(item.confidence || 0) < TRUSTED_CONFIDENCE) return null;
+        return axisPhrase(axis,Number(item.value || 0));
+      })
+      .filter(Boolean)
+      .slice(0,4);
+
+    if(!phrases.length){
+      return `${ratioIntro} MIX全体として断定できる味わい軸はまだ少なめです。各フレーバーの詳細を参考にしてください。`;
+    }
+    return `${ratioIntro} 監査済みデータを配合比で合成すると、${phrases.join('、')}寄りのイメージです。`;
+  }
+
+  function mixImpressionTags(aggregate){
+    const tags = [];
+    AXIS_ORDER.forEach((axis) => {
+      const item = aggregate.axes?.[axis];
+      if(!item || Number(item.confidence || 0) < TRUSTED_CONFIDENCE) return;
+      const phrase = axisPhrase(axis,Number(item.value || 0));
+      if(phrase && !tags.includes(phrase)) tags.push(phrase);
+    });
+    return tags.slice(0,6);
+  }
+
+  function buildOverallSection(components,data){
+    const aggregate = aggregateMix(components,data);
+    const section = el('div','flavor-detail-section');
+    section.appendChild(el('div','flavor-detail-section-title','MIX全体のイメージ'));
+    const summary = el('div','flavor-detail-evidence',mixSummary(components,aggregate));
+    section.appendChild(summary);
+
+    const impressionTags = mixImpressionTags(aggregate);
+    if(impressionTags.length){
+      const tagTitle = el('div','flavor-detail-section-title','総合イメージ');
+      tagTitle.style.marginTop = '14px';
+      section.appendChild(tagTitle);
+      addTags(section,impressionTags);
+    }
+
+    if(aggregate.flavor_notes_ja.length){
+      const noteTitle = el('div','flavor-detail-section-title','構成の香味キーワード');
+      noteTitle.style.marginTop = '14px';
+      section.appendChild(noteTitle);
+      addTags(section,aggregate.flavor_notes_ja);
+    }
+
+    const trustedAxes = {};
+    AXIS_ORDER.forEach((axis) => {
+      const item = aggregate.axes?.[axis];
+      if(item) trustedAxes[axis] = item;
+    });
+    if(Object.keys(trustedAxes).length){
+      const profile = el('div','flavor-detail-section');
+      profile.style.marginTop = '16px';
+      addAxes(profile,{axes:trustedAxes});
+      section.appendChild(profile);
+    }
+
+    const supported = Object.values(aggregate.axes || {}).filter((item) => Number(item.confidence || 0) >= TRUSTED_CONFIDENCE).length;
+    section.appendChild(el(
+      'div',
+      'flavor-detail-footnote',
+      `MIX全体の数値は、各フレーバーの監査済み軸を配合比で加重して算出しています。7軸中${supported}軸が総合説明に使える信頼度です。低信頼・未収録の軸は説明から除外しています。実際の印象はボウル、熱管理、吸い方でも変わります。`
+    ));
+    return section;
   }
 
   function buildComponent(detail,component,index){
@@ -202,8 +370,12 @@
     });
     top.appendChild(close);
     panel.appendChild(top);
-    panel.appendChild(el('div','flavor-detail-summary','各フレーバーを開くと、味・香り・イメージ・味わいプロフィールを確認できます。配合比やセッティングでミックス全体の印象は変わります。'));
 
+    panel.appendChild(buildOverallSection(components,data));
+
+    const componentTitle = el('div','flavor-detail-section-title','各フレーバーの詳細');
+    componentTitle.style.marginTop = '22px';
+    panel.appendChild(componentTitle);
     components.forEach((component,index) => {
       panel.appendChild(buildComponent(lookup(data,component),component,index+1));
     });
