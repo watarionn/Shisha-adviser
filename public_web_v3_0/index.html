@@ -84,7 +84,9 @@
         const err=new Error(payload?.error?.message||`HTTP ${res.status}`);
         err.status=res.status; err.payload=payload; throw err;
       }
-      return {payload,etag:res.headers.get('ETag')||''};
+      const headerEtag=res.headers.get('ETag')||'';
+      const revisionToken=payload?.data?.revision_token||headerEtag.replace(/^W\//,'').replace(/^"|"$/g,'');
+      return {payload,etag:revisionToken};
     }
 
     async function ensureGuest(){
@@ -104,6 +106,14 @@
 
     async function ensureSession(){
       if(!sessionId) await createSession();
+    }
+
+    async function refreshSessionToken(){
+      if(!sessionId) return false;
+      const {etag:newEtag}=await request(`/v1/sessions/${sessionId}`);
+      if(!newEtag) return false;
+      etag=newEtag;
+      return true;
     }
 
     function renderRecommendations(result){
@@ -131,7 +141,39 @@
       messages.appendChild(box); messages.scrollTop=messages.scrollHeight;
     }
 
-    function renderData(data){
+    const KNOWN_ANCHORS=[{
+      aliases:['freecuba','free cuba','フリーキューバ'],
+      title:'STARLINE / Free Cuba',
+      summary:'コーラ＋ライム系の爽快フレーバーです。ミントやシトラスを少量足す方向が合わせやすいです。',
+      candidates:[
+        ['Social Smoke / Mint','少量で清涼感を足す方向'],
+        ['Social Smoke / Lime','ライムの輪郭を強める方向'],
+        ['Fumari / Lemon Mint','シトラス＋ミントで爽快寄り'],
+        ['Starbuzz / Citrus Mint','柑橘と清涼感を重ねる方向']
+      ],
+      note:'Free Cuba自体は現行の推薦スコア用データに未収録です。ここでは相性スコアではなく、味の構成に基づく参考候補として表示しています。'
+    }];
+
+    function findKnownAnchor(text){
+      const t=(text||'').toLowerCase().replace(/\s+/g,' ');
+      return KNOWN_ANCHORS.find(a=>a.aliases.some(x=>t.includes(x)))||null;
+    }
+
+    function renderKnownAnchorAdvice(anchor){
+      const box=document.createElement('div'); box.className='msg assistant';
+      const lead=document.createElement('div'); lead.textContent=`${anchor.title} を基準に考えます。${anchor.summary}`; box.appendChild(lead);
+      const rec=document.createElement('div'); rec.className='rec'; box.appendChild(rec);
+      const t=document.createElement('div'); t.className='section-title'; t.textContent='参考候補'; rec.appendChild(t);
+      anchor.candidates.forEach(x=>card(rec,x[0],x[1]));
+      const note=document.createElement('div'); note.className='rec-meta'; note.textContent=anchor.note; box.appendChild(note);
+      messages.appendChild(box); messages.scrollTop=messages.scrollHeight;
+    }
+
+    function renderData(data,text){
+      if(data.route==='UNSUPPORTED'){
+        const known=findKnownAnchor(text);
+        if(known) return renderKnownAnchorAdvice(known);
+      }
       const result=data.recommendation_result;
       if(result&&result.status==='OK') return renderRecommendations(result);
       if(data.feedback_result){
@@ -146,16 +188,25 @@
       bubble(text,'user'); input.value=''; sendBtn.disabled=true;
       try{
         await ensureSession();
-        const {payload,etag:newEtag}=await request(`/v1/sessions/${sessionId}/turn`,{
-          method:'POST',headers:{'If-Match':etag},body:JSON.stringify({text})
-        });
-        etag=newEtag||etag; renderData(payload.data);
+        let turn;
+        try{
+          turn=await request(`/v1/sessions/${sessionId}/turn`,{
+            method:'POST',headers:{'If-Match':etag},body:JSON.stringify({text})
+          });
+        }catch(err){
+          if(err.status!==412 || !(await refreshSessionToken())) throw err;
+          turn=await request(`/v1/sessions/${sessionId}/turn`,{
+            method:'POST',headers:{'If-Match':etag},body:JSON.stringify({text})
+          });
+        }
+        const {payload,etag:newEtag}=turn;
+        etag=newEtag||etag; renderData(payload.data,text);
       }catch(err){
         if(err.status===401){
           token=''; sessionId=''; etag=''; localStorage.removeItem(TOKEN_KEY);
           bubble('接続情報を更新します。もう一度送ってください。','assistant error');
         }else if(err.status===412){
-          sessionId=''; etag=''; bubble('会話状態を更新しました。もう一度送ってください。','assistant error');
+          sessionId=''; etag=''; bubble('会話状態の同期に失敗しました。新しい相談を開始してください。','assistant error');
         }else{
           bubble(`エラー: ${err.message}`,'assistant error');
         }
