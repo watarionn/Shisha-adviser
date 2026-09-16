@@ -12,7 +12,7 @@ Recommended flavors should be understandable before the user asks a follow-up qu
 - Unknown/new flavors fail closed with an explicit "details pending" message instead of invented descriptions.
 
 ## Data contract
-`public_web_v3_0/flavor-details.json` is generated from the audited 200-flavor scored recommender scope in Recovery Canonical v2.7 working data.
+`public_web_v3_0/flavor-details.json` is a small manifest for five compact data shards generated from the audited 200-flavor scored recommender scope in Recovery Canonical v2.7 working data.
 
 Fields include:
 - brand / name / flavor_id
