@@ -55,27 +55,42 @@ Never commit the Google client secret or refresh token to GitHub, issue comments
 
 To minimize administration, the OIDC audience and Drive backup can use one Google OAuth Web client in one Google Cloud project.
 
-During private validation, a Google-owned temporary redirect such as OAuth 2.0 Playground may be used to obtain test credentials and the Drive refresh token. When public application routing is finalized, configure only the required production origins/redirects and remove temporary validation redirects that are no longer needed.
+For the initial private validation, create a Web application client and temporarily add this authorized redirect URI:
 
-The Drive authorization request must use only:
+```text
+https://developers.google.com/oauthplayground
+```
+
+OAuth 2.0 Playground may then use **your own OAuth credentials** with access type `Offline` to obtain the Drive refresh token. The Drive authorization request must use only:
 
 ```text
 https://www.googleapis.com/auth/drive.file
 ```
 
+Do not use Playground's default client credentials for the production backup token. Google notes that Playground's own refresh tokens are automatically revoked after 24 hours; using the application's own OAuth credentials avoids that Playground-specific behavior.
+
 The OIDC test request uses `openid email` (and `profile` only if the UI requires it).
+
+### Publishing status requirement
+
+`Testing` is acceptable only for the first connectivity validation. Because the Drive backup requires `drive.file` plus offline access, a refresh token issued while the OAuth app remains in **Testing** expires after 7 days. Before backup is accepted as production-ready, move the OAuth app to **In production** and mint the durable Drive refresh token under that publishing status.
+
+Do not mark `PROD-BACKUP` or `PROD-RETENTION` PASS while relying on a Testing-mode refresh token.
+
+When public application routing is finalized, configure only the required application origins/redirects and remove the temporary OAuth Playground redirect if it is no longer needed.
 
 ## Backup acceptance test
 
 A backup blocker closes only after a real Railway production cycle demonstrates all of the following:
 
-1. SQLite online backup is created from `/data/shisha/shisha_advisor.db`.
-2. Local backup verification passes.
-3. SQLite file and manifest are uploaded to Google Drive.
-4. Both files are downloaded again from Google Drive.
-5. Downloaded SHA-256 matches the locally produced SHA-256.
-6. SQLite integrity verification passes on the downloaded copy.
-7. Retention enumerates only this application's backup generations and prunes generations beyond the configured count.
+1. OAuth app is `In production` for the durable Drive grant.
+2. SQLite online backup is created from `/data/shisha/shisha_advisor.db`.
+3. Local backup verification passes.
+4. SQLite file and manifest are uploaded to Google Drive.
+5. Both files are downloaded again from Google Drive.
+6. Downloaded SHA-256 matches the locally produced SHA-256.
+7. SQLite integrity verification passes on the downloaded copy.
+8. Retention enumerates only this application's backup generations and prunes generations beyond the configured count.
 
 Expected successful worker event:
 
