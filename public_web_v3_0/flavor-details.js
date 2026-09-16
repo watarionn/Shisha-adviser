@@ -60,7 +60,21 @@
     try {
       const res = await fetch(DETAILS_URL, {cache: 'no-store'});
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      catalog = hydrateCatalog(await res.json());
+      const root = await res.json();
+      if (Array.isArray(root?.shards)) {
+        const shards = await Promise.all(root.shards.map(async (url) => {
+          const part = await fetch(url, {cache: 'no-store'});
+          if (!part.ok) throw new Error(`HTTP ${part.status} for ${url}`);
+          return part.json();
+        }));
+        catalog = hydrateCatalog({
+          v: root.v || 1,
+          o: shards[0]?.o || [],
+          f: shards.flatMap((part) => part.f || []),
+        });
+      } else {
+        catalog = hydrateCatalog(root);
+      }
       return catalog;
     } catch (err) {
       catalogError = true;
