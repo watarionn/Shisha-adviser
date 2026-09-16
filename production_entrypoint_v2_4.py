@@ -63,4 +63,12 @@ if auth_mode == 'oidc':
     for flag, value in required.items():
         args.extend([flag, value])
 
+probe_enabled = os.environ.get('SHISHA_OIDC_PROBE_ENABLED', 'false').strip().lower() in {
+    '1', 'true', 'yes'
+}
+if probe_enabled:
+    if auth_mode != 'oidc':
+        raise SystemExit('SHISHA_OIDC_PROBE_ENABLED requires SHISHA_AUTH_MODE=oidc')
+    subprocess.Popen([sys.executable, '/app/production_google_oidc_probe_v2_7.py'])
+
 os.execv(sys.executable, args)
