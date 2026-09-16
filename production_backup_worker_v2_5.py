@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import boto3
+from botocore.exceptions import ClientError
 
 from shisha_backup_v1_6 import create_backup, verify_backup
 
@@ -42,6 +43,35 @@ def _client(cfg):
 
 def _emit(event, **fields):
     print(json.dumps({"event": event, **fields}, ensure_ascii=False), flush=True)
+
+
+def _emit_safe_credential_shape(cfg):
+    access_id = cfg["access_key"]
+    secret = cfg["secret_key"]
+    _emit(
+        "backup_credential_shape",
+        provider=os.environ.get("SHISHA_BACKUP_PROVIDER", "s3"),
+        endpoint=cfg["endpoint"],
+        region=cfg["region"],
+        bucket=cfg["bucket"],
+        access_id_length=len(access_id),
+        access_id_starts_with_GOOG=access_id.startswith("GOOG"),
+        access_id_has_edge_whitespace=access_id != access_id.strip(),
+        secret_length=len(secret),
+        secret_has_edge_whitespace=secret != secret.strip(),
+        secret_value_logged=False,
+    )
+
+
+def _preflight(s3, cfg):
+    response = s3.list_objects_v2(Bucket=cfg["bucket"], Prefix=cfg["prefix"] + "/", MaxKeys=1)
+    _emit(
+        "backup_preflight",
+        status="PASS",
+        provider=os.environ.get("SHISHA_BACKUP_PROVIDER", "s3"),
+        bucket=cfg["bucket"],
+        key_count=response.get("KeyCount", 0),
+    )
 
 
 def _remote_verify(s3, cfg, backup_key, manifest_key, expected_sha):
@@ -81,6 +111,7 @@ def run_once(s3=None, cfg=None):
     if not cfg["db"].exists():
         return {"status": "DB_NOT_READY"}
     s3 = s3 or _client(cfg)
+    _preflight(s3, cfg)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     with tempfile.TemporaryDirectory(prefix="shisha_backup_upload_") as td:
         td = Path(td)
@@ -109,13 +140,21 @@ def run_once(s3=None, cfg=None):
 
 def main():
     cfg = _cfg()
+    _emit_safe_credential_shape(cfg)
     _emit("backup_worker_started", prefix=cfg["prefix"], retention_count=cfg["retention"], interval_seconds=cfg["interval"])
     while True:
         try:
             result = run_once(cfg=cfg)
             _emit("backup_cycle", **result)
         except Exception as exc:
-            _emit("backup_cycle_failed", error_type=type(exc).__name__, message=str(exc)[:300])
+            fields = {
+                "error_type": type(exc).__name__,
+                "message": str(exc)[:300],
+            }
+            if isinstance(exc, ClientError):
+                error = exc.response.get("Error", {})
+                fields["error_code"] = error.get("Code")
+            _emit("backup_cycle_failed", **fields)
         time.sleep(cfg["interval"])
 
 
