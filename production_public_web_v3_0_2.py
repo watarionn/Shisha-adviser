@@ -10,6 +10,7 @@ import production_public_web_v3_0 as base
 
 ASSETS = {
     "/flavor-details.js": ("flavor-details.js", "application/javascript; charset=utf-8"),
+    "/flavor-mix-details.js": ("flavor-mix-details.js", "application/javascript; charset=utf-8"),
     "/flavor-details.json": ("flavor-details.json", "application/json; charset=utf-8"),
     **{
         f"/flavor-details-{index}.json": (
@@ -22,7 +23,7 @@ ASSETS = {
 
 
 class PublicHandler(base.PublicHandler):
-    server_version = "ShishaAdvisorPublic/3.0.2"
+    server_version = "ShishaAdvisorPublic/3.0.3"
 
     def _serve_home(self):
         target = base.WEB_ROOT / "index.html"
@@ -33,9 +34,13 @@ class PublicHandler(base.PublicHandler):
                 "Public UI unavailable.\n",
             )
         html = target.read_text(encoding="utf-8")
-        marker = '<script src="/flavor-details.js" defer></script>'
-        if marker not in html:
-            html = html.replace("</body>", f"  {marker}\n</body>")
+        scripts = [
+            '<script src="/flavor-details.js" defer></script>',
+            '<script src="/flavor-mix-details.js" defer></script>',
+        ]
+        for marker in scripts:
+            if marker not in html:
+                html = html.replace("</body>", f"  {marker}\n</body>")
         return self._send(
             200,
             {"Content-Type": "text/html; charset=utf-8"},
@@ -78,7 +83,7 @@ def serve_public(service, host, port, guest_enabled):
         json.dumps(
             {
                 "status": "SERVING",
-                "version": "v3.0.2-flavor-detail",
+                "version": "v3.0.3-mix-detail",
                 "host": host,
                 "port": int(port),
                 "auth_mode": service.auth_mode,
