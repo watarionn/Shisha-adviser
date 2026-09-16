@@ -184,6 +184,15 @@ def _prune(service, folder_id: str, cfg):
     return removed
 
 
+def _delete_quietly(service, file_id: str | None):
+    if not file_id:
+        return
+    try:
+        service.files().delete(fileId=file_id).execute()
+    except Exception:
+        pass
+
+
 def _emit(event, **fields):
     print(json.dumps({"event": event, **fields}, ensure_ascii=False), flush=True)
 
@@ -209,6 +218,7 @@ def run_once(service=None, cfg=None):
         backup_meta = _upload(
             service, backup, folder_id, backup.name, cfg, "sqlite", result["sha256"]
         )
+        manifest_meta = None
         try:
             manifest_meta = _upload(
                 service,
@@ -223,10 +233,8 @@ def run_once(service=None, cfg=None):
                 service, backup_meta["id"], manifest_meta["id"], result["sha256"]
             )
         except Exception:
-            try:
-                service.files().delete(fileId=backup_meta["id"]).execute()
-            except Exception:
-                pass
+            _delete_quietly(service, backup_meta.get("id"))
+            _delete_quietly(service, manifest_meta.get("id") if manifest_meta else None)
             raise
 
     removed = _prune(service, folder_id, cfg)
