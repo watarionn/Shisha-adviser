@@ -26,13 +26,16 @@ if os.environ.get('SHISHA_BACKUP_ENABLED', 'false').strip().lower() in {'1', 'tr
     backup_provider = os.environ.get('SHISHA_BACKUP_PROVIDER', 's3').strip().lower()
     backup_workers = {
         's3': '/app/production_backup_worker_v2_5.py',
+        'gcs-hmac': '/app/production_backup_worker_v2_5.py',
+        'gcs_hmac': '/app/production_backup_worker_v2_5.py',
+        'google-cloud-storage': '/app/production_backup_worker_v2_5.py',
         'google-drive': '/app/production_google_drive_backup_worker_v2_7.py',
         'google_drive': '/app/production_google_drive_backup_worker_v2_7.py',
     }
     backup_worker = backup_workers.get(backup_provider)
     if not backup_worker:
         raise SystemExit(
-            'Unsupported SHISHA_BACKUP_PROVIDER. Expected one of: s3, google-drive'
+            'Unsupported SHISHA_BACKUP_PROVIDER. Expected one of: s3, gcs-hmac, google-drive'
         )
     subprocess.Popen([sys.executable, backup_worker])
 
