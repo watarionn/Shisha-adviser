@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Shisha Advisor。好みを文章で伝えると、フレーバーやミックス候補を整理します。">
+  <title>Shisha Advisor</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b0a0d;--panel:#151218;--soft:#1c1720;--text:#f5eff5;--muted:#b9adb9;--line:#382d3b;--accent:#edc1df;--good:#9dd9b7;font-family:Inter,system-ui,sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 90% 0,#211522 0,transparent 32%),var(--bg);color:var(--text);min-height:100vh}
+    button,input{font:inherit}.shell{width:min(1180px,calc(100% - 28px));margin:auto}.top{display:flex;justify-content:space-between;align-items:center;padding:24px 0;border-bottom:1px solid var(--line)}
+    .brand{font-weight:850;letter-spacing:-.03em}.badge{font-size:.72rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 9px;margin-left:8px}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:9px 14px;border-radius:999px;cursor:pointer}
+    .layout{display:grid;grid-template-columns:330px 1fr;gap:26px;padding:34px 0 56px}.side,.chat{border:1px solid var(--line);background:rgba(21,18,24,.92);border-radius:22px}.side{padding:28px;height:max-content;position:sticky;top:20px}
+    .eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.16em;color:var(--accent)}h1{font-size:clamp(2.5rem,6vw,4.5rem);line-height:.98;letter-spacing:-.06em;margin:12px 0 20px}.side p{color:var(--muted);line-height:1.75}.notes{font-size:.82rem;padding-top:18px;border-top:1px solid var(--line)}
+    .chat{min-height:680px;display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}.status{color:var(--muted);font-size:.84rem}
+    #messages{padding:24px;display:flex;flex-direction:column;gap:14px;flex:1;overflow:auto;max-height:610px}.msg{max-width:86%;padding:14px 16px;border-radius:16px;line-height:1.65}.assistant{background:var(--soft);align-self:flex-start}.user{background:#ead0e1;color:#251820;align-self:flex-end}.error{border:1px solid #74414a;background:#2c171b}
+  </style>
+</head>  <style>
+    .quick{display:flex;gap:8px;flex-wrap:wrap;padding:0 24px 18px}.quick button{background:#201a22;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:8px 11px;cursor:pointer}.quick button:hover{color:var(--text);border-color:#6e536c}
+    .composer{display:flex;gap:10px;padding:18px 20px;border-top:1px solid var(--line);background:#100e12}.composer input{flex:1;min-width:0;background:#0e0c10;color:var(--text);border:1px solid var(--line);border-radius:14px;padding:13px 14px;outline:none}.composer input:focus{border-color:#75576f}.send{border:0;border-radius:14px;padding:0 20px;background:var(--accent);color:#281b24;font-weight:800;cursor:pointer}.send:disabled{opacity:.5;cursor:wait}
+    .rec{display:grid;gap:9px;margin-top:12px}.rec-card{padding:12px;border:1px solid #423544;border-radius:12px;background:#100e12}.rec-card strong{display:block}.rec-meta{color:var(--muted);font-size:.82rem;margin-top:3px}.section-title{font-size:.76rem;color:var(--accent);font-weight:850;letter-spacing:.08em;margin-top:14px}.privacy{font-size:.76rem;color:#8f838e;margin-top:16px}
+    @media(max-width:820px){.layout{grid-template-columns:1fr}.side{position:static}.chat{min-height:620px}#messages{max-height:none}.msg{max-width:94%}}
+  </style>
+</head>
+<body>
+  <div class="shell top">
+    <div class="brand">Shisha Advisor <span class="badge">PUBLIC BETA</span></div>
+    <button id="newSession" class="ghost" type="button">新しい相談</button>
+  </div>
+  <main class="shell layout">
+    <aside class="side">
+      <div class="eyebrow">FLAVOR ASSISTANT</div>
+      <h1>好みを、言葉から探す。</h1>
+      <p>甘さ、酸味、清涼感、香り、苦手なものなどを自由に入力してください。単品とミックス候補を整理して返します。</p>
+      <p class="notes">公開ベータでは匿名ゲストとして利用できます。ブラウザごとに利用領域を分け、他の利用者の相談履歴にはアクセスできません。</p>
+      <p class="privacy">成人向けの嗜好情報サービスです。健康上の安全性を保証するものではありません。居住地域の法令を守って利用してください。</p>
+    </aside>
+    <section class="chat" aria-label="Shisha Advisor チャット">
+      <div class="chat-head"><span class="dot"></span><span id="status" class="status">ゲスト準備中</span></div>
+      <div id="messages" aria-live="polite"></div>      <div class="quick">
+        <button type="button" data-prompt="甘くてフルーティー。ミントなしでおすすめして">甘くフルーティー</button>
+        <button type="button" data-prompt="さっぱり柑橘系で、清涼感は弱めがいい">さっぱり柑橘</button>
+        <button type="button" data-prompt="デザート系で濃厚なミックスを提案して">濃厚デザート</button>
+      </div>
+      <form id="composer" class="composer">
+        <input id="input" maxlength="500" autocomplete="off" placeholder="例：甘め、柑橘、ミントなし。2種類で混ぜたい">
+        <button id="send" class="send" type="submit">送る</button>
+      </form>
+    </section>
+  </main>
+  <script>
+    const TOKEN_KEY='shisha_advisor_guest_token_v1';
+    let token=localStorage.getItem(TOKEN_KEY)||'';
+    let sessionId='';
+    let etag='';
+    const messages=document.getElementById('messages');
+    const statusEl=document.getElementById('status');
+    const input=document.getElementById('input');
+    const sendBtn=document.getElementById('send');
+
+    function bubble(text,kind='assistant'){
+      const el=document.createElement('div');
+      el.className=`msg ${kind}`;
+      el.textContent=text;
+      messages.appendChild(el);
+      messages.scrollTop=messages.scrollHeight;
+      return el;
+    }
+
+    function card(parent,title,meta){
+      const el=document.createElement('div'); el.className='rec-card';
+      const strong=document.createElement('strong'); strong.textContent=title; el.appendChild(strong);
+      if(meta){const small=document.createElement('div'); small.className='rec-meta'; small.textContent=meta; el.appendChild(small)}
+      parent.appendChild(el);
+    }
+
+    async function request(path,options={},auth=true){
+      const headers={...(options.headers||{})};
+      if(options.body) headers['Content-Type']='application/json';
+      if(auth&&token) headers['Authorization']=`Bearer ${token}`;
+      const res=await fetch(path,{...options,headers});
+      const payload=await res.json().catch(()=>({ok:false,error:{message:'Invalid server response.'}}));
+      if(!res.ok){
+        const err=new Error(payload?.error?.message||`HTTP ${res.status}`);
+        err.status=res.status; err.payload=payload; throw err;
+      }
+      return {payload,etag:res.headers.get('ETag')||''};
+    }
+
+    async function ensureGuest(){
+      if(token) return;
+      statusEl.textContent='ゲストを準備中';
+      const {payload}=await request('/v1/guest',{method:'POST',body:'{}'},false);
+      token=payload.data.token;
+      localStorage.setItem(TOKEN_KEY,token);
+    }
+
+    async function createSession(){
+      await ensureGuest();
+      const {payload,etag:newEtag}=await request('/v1/sessions',{method:'POST',body:'{}'});
+      sessionId=payload.data.session_id; etag=newEtag;
+      statusEl.textContent='匿名ゲストとして接続中';
+    }
+
+    async function ensureSession(){
+      if(!sessionId) await createSession();
+    }
+
+    function renderRecommendations(result){
+      const box=document.createElement('div'); box.className='msg assistant';
+      const lead=document.createElement('div');
+      lead.textContent='候補を整理しました。気になる方向があれば、さらに条件を足してください。';
+      box.appendChild(lead);
+      const rec=document.createElement('div'); rec.className='rec'; box.appendChild(rec);
+
+      const singles=(result.singles||[]).slice(0,3);
+      if(singles.length){
+        const t=document.createElement('div'); t.className='section-title'; t.textContent='SINGLE'; rec.appendChild(t);
+        singles.forEach(x=>card(rec,`${x.brand} / ${x.flavor_name}`,`score ${Number(x.score||0).toFixed(1)}`));
+      }
+      const pairs=(result.pairs||[]).slice(0,3);
+      if(pairs.length){
+        const t=document.createElement('div'); t.className='section-title'; t.textContent='MIX'; rec.appendChild(t);
+        pairs.forEach(x=>card(rec,x.mix_label||`${x.component_1} + ${x.component_2}`,`score ${Number(x.score||0).toFixed(1)}`));
+      }
+      const triples=(result.triples||[]).slice(0,2);
+      if(triples.length){
+        const t=document.createElement('div'); t.className='section-title'; t.textContent='TRIPLE'; rec.appendChild(t);
+        triples.forEach(x=>card(rec,x.mix_label||'3-flavor mix',`score ${Number(x.score||0).toFixed(1)}`));
+      }
+      messages.appendChild(box); messages.scrollTop=messages.scrollHeight;
+    }
+
+    function renderData(data){
+      const result=data.recommendation_result;
+      if(result&&result.status==='OK') return renderRecommendations(result);
+      if(data.feedback_result){
+        bubble('フィードバックを記録しました。次の候補に反映します。');
+        return;
+      }
+      bubble('好みを受け取りました。もう少し条件を足すか、「おすすめして」と送ってください。');
+    }
+
+    async function sendText(text){
+      text=(text||'').trim(); if(!text) return;
+      bubble(text,'user'); input.value=''; sendBtn.disabled=true;
+      try{
+        await ensureSession();
+        const {payload,etag:newEtag}=await request(`/v1/sessions/${sessionId}/turn`,{
+          method:'POST',headers:{'If-Match':etag},body:JSON.stringify({text})
+        });
+        etag=newEtag||etag; renderData(payload.data);
+      }catch(err){
+        if(err.status===401){
+          token=''; sessionId=''; etag=''; localStorage.removeItem(TOKEN_KEY);
+          bubble('接続情報を更新します。もう一度送ってください。','assistant error');
+        }else if(err.status===412){
+          sessionId=''; etag=''; bubble('会話状態を更新しました。もう一度送ってください。','assistant error');
+        }else{
+          bubble(`エラー: ${err.message}`,'assistant error');
+        }
+      }finally{sendBtn.disabled=false; input.focus()}
+    }
+
+    document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();sendText(input.value)});
+    document.querySelectorAll('[data-prompt]').forEach(btn=>btn.addEventListener('click',()=>sendText(btn.dataset.prompt)));
+    document.getElementById('newSession').addEventListener('click',async()=>{
+      sessionId=''; etag=''; messages.replaceChildren();
+      bubble('新しい相談を始めます。今日の気分や、好き・苦手な味を教えてください。');
+      try{await createSession()}catch(err){bubble(`接続エラー: ${err.message}`,'assistant error')}
+    });
+
+    bubble('こんにちは。今日の気分や、好き・苦手な味を自由に教えてください。');
+    ensureGuest().then(()=>{statusEl.textContent='匿名ゲストとして利用できます'}).catch(err=>{
+      statusEl.textContent='接続エラー'; bubble(`接続エラー: ${err.message}`,'assistant error');
+    });
+  </script>
+</body>
+</html>

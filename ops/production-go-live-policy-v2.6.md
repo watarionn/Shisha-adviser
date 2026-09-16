@@ -1,5 +1,7 @@
 # Production go-live policy v2.6
 
+> Public-beta authentication is superseded by ops/production-public-guest-policy-v3.0.md. This v2.6 file remains the historical pre-public baseline.
+
 - Public production authentication policy: OIDC required.
 - `local-bearer` is allowed only while `advisor-production` has no public domain and `SHISHA_PUBLIC_GO_LIVE=false`.
 - Current private production service must keep `/healthz` healthcheck enabled.
