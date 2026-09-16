@@ -11,6 +11,13 @@ import production_public_web_v3_0 as base
 ASSETS = {
     "/flavor-details.js": ("flavor-details.js", "application/javascript; charset=utf-8"),
     "/flavor-details.json": ("flavor-details.json", "application/json; charset=utf-8"),
+    **{
+        f"/flavor-details-{index}.json": (
+            f"flavor-details-{index}.json",
+            "application/json; charset=utf-8",
+        )
+        for index in range(1, 6)
+    },
 }
 
 
