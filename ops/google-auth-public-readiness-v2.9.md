@@ -1,7 +1,7 @@
 # Google Auth public-user readiness v2.9
 
 Date: 2026-09-16
-Status: prepared / external Google Auth Platform actions still required
+Status: public-site prepared / owned production domain and Google project actions pending
 Scope: public-user Google authentication only
 
 ## Goal
@@ -66,6 +66,8 @@ Before verification:
 - use HTTPS for all production application origins and redirect URIs;
 - do not rely on a shared third-party hostname that cannot be verified as owned by the application operator.
 
+The currently discovered public portfolio URL is `https://cf278796.cloudfree.jp/`. It is useful as an existing public-site reference, but it is a provider-hosted hostname and must not be used as the production OAuth ownership anchor unless the registrable domain itself can be proven as operator-owned in Search Console. The production path therefore still requires a deliberately selected owned domain.
+
 ### 5. Public application homepage
 
 The homepage used for Google verification must:
@@ -79,6 +81,9 @@ The homepage used for Google verification must:
 - not be only a login page;
 - not redirect to a different domain.
 
+A domain-independent static homepage is already prepared at:
+`ops/google-auth-public-site-v2.9/index.html`.
+
 ### 6. Public privacy policy
 
 The privacy policy must:
@@ -91,7 +96,14 @@ The privacy policy must:
 - accurately reflect the final OIDC scopes and implementation;
 - remain consistent with the actual application behavior.
 
-Terms of Service may also be published and linked. If the Google Auth Platform UI requests a Terms URL for the final production configuration, use a page on the same verified domain.
+A domain-independent draft suitable for final operational review is prepared at:
+`ops/google-auth-public-site-v2.9/privacy.html`.
+
+Optional terms are prepared at:
+`ops/google-auth-public-site-v2.9/terms.html`.
+
+Deployment and verification checks are in:
+`ops/google-auth-public-site-v2.9/README.md`.
 
 ### 7. Branding configuration
 
@@ -147,33 +159,30 @@ After the Google Auth Platform production configuration is approved/published, b
 
 Only after that acceptance test passes may the public-routing gate be reconsidered.
 
-## Execution order
+## Execution order and progress
 
-Use this order to avoid unnecessary exposure:
-
-1. Confirm/create the dedicated Google Cloud production project.
-2. Select the final owned production domain.
-3. Verify root-domain ownership in Search Console.
-4. Prepare and host public homepage + privacy policy (+ terms if used).
-5. Configure Authorized domains, Branding, Audience, Data Access, and production OAuth client URLs.
-6. Verify that only minimal OIDC scopes are requested.
-7. Move Audience from `Testing` to `In production` at the appropriate verification step.
-8. Complete Google verification and publish the approved branding.
-9. Repeat the real OIDC positive/negative validation on private production.
-10. Re-evaluate `SHISHA_PUBLIC_GO_LIVE` and public Railway domain attachment only after all checks pass.
+1. [ ] Confirm/create the dedicated Google Cloud production project.
+2. [ ] Select and obtain the final owned production domain.
+3. [ ] Verify root-domain ownership in Search Console.
+4. [x] Prepare public homepage + privacy policy + optional terms as domain-independent static artifacts.
+5. [ ] Host those pages on the verified owned domain.
+6. [ ] Configure Authorized domains, Branding, Audience, Data Access, and production OAuth client URLs.
+7. [ ] Verify that only minimal OIDC scopes are requested.
+8. [ ] Move Audience from `Testing` to `In production` at the appropriate verification step.
+9. [ ] Complete Google verification and publish the approved branding.
+10. [ ] Repeat the real OIDC positive/negative validation on private production.
+11. [ ] Re-evaluate `SHISHA_PUBLIC_GO_LIVE` and public Railway domain attachment only after all checks pass.
 
 ## Current blocking inputs
 
-The repository and Railway runtime are prepared, but the following Google/external infrastructure items are not yet recorded as complete:
+The repository and Railway runtime are prepared. Public verification content is also prepared. The next irreversible/external steps require:
 
-- dedicated production Google Cloud project confirmation;
-- final owned production domain;
-- Search Console ownership verification;
-- public homepage URL;
-- public privacy policy URL;
-- production Branding/Audience/Verification Center completion.
+- a dedicated production Google Cloud project selection/creation;
+- a final owned production domain that can be verified in Search Console.
 
-Because production currently has zero public domains, none of these missing items should be bypassed by attaching a temporary public Railway domain.
+No prior Shisha Advisor decision establishing either identifier was found in the project handoffs or prior context.
+
+Because production currently has zero public domains, these missing items must not be bypassed by attaching a temporary public Railway domain.
 
 ## Safety constraints
 
