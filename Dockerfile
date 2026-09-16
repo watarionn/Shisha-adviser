@@ -30,7 +30,7 @@ RUN cat \
  && python /app/apply_rc_v2_3_patch.py \
  && python /app/production_hardening_patch_v2_4.py \
  && python -m py_compile /app/production_entrypoint_v2_4.py /app/production_public_web_v3_0.py /app/production_public_web_v3_0_2.py /app/production_backup_worker_v2_5.py /app/production_google_drive_backup_worker_v2_7.py /app/production_google_drive_backup_smoke_v2_7.py /app/production_google_oidc_probe_v2_7.py \
- && python -c "import json,pathlib; p=json.loads(pathlib.Path('/app/public_web_v3_0/flavor-details.json').read_text()); assert p['v']==1 and len(p['f'])==200" \
+ && python -c "import json,pathlib; root=json.loads(pathlib.Path('/app/public_web_v3_0/flavor-details.json').read_text()); parts=[json.loads(pathlib.Path('/app/public_web_v3_0', pathlib.Path(url).name).read_text()) for url in root['shards']]; assert root['v']==1 and sum(len(p['f']) for p in parts)==200" \
  && python -c "import google.oauth2.credentials, googleapiclient.discovery, production_google_drive_backup_worker_v2_7 as m; assert m.DRIVE_FILE_SCOPE == 'https://www.googleapis.com/auth/drive.file'" \
  && python /app/production_google_drive_backup_smoke_v2_7.py \
  && rm -rf /tmp/staging_bundle /tmp/staging_source_bundle.b64 \
