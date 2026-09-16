@@ -73,13 +73,22 @@ class GuestRateGate:
 
 
 class PublicHandler(BaseHandler):
-    server_version = "ShishaAdvisorPublic/3.0"
+    server_version = "ShishaAdvisorPublic/3.0.1"
 
     def _client_key(self):
         forwarded = self.headers.get("X-Forwarded-For", "").split(",", 1)[0].strip()
         return forwarded or str(self.client_address[0])
 
     def _send(self, status, headers, payload):
+        # Railway may weaken ETag when compressing (W/"...").
+        # Carry the application revision token in JSON as a transformation-safe channel.
+        etag_header = headers.get("ETag") or headers.get("etag")
+        if etag_header and isinstance(payload, dict) and isinstance(payload.get("data"), dict):
+            token = str(etag_header).strip()
+            if token.startswith("W/"):
+                token = token[2:].strip()
+            token = token.strip('"')
+            payload = {**payload, "data": {**payload["data"], "revision_token": token}}
         if isinstance(payload, bytes):
             data = payload
         elif isinstance(payload, str):
@@ -88,7 +97,7 @@ class PublicHandler(BaseHandler):
             data = (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
         self.send_response(status)
         merged = dict(headers)
-        merged.setdefault("Cache-Control", "no-store")
+        merged.setdefault("Cache-Control", "no-store, no-transform")
         merged.setdefault("X-Content-Type-Options", "nosniff")
         merged.setdefault("Referrer-Policy", "no-referrer")
         merged.setdefault("X-Frame-Options", "DENY")
@@ -170,7 +179,7 @@ def serve_public(service, host, port, guest_enabled):
     )
     print(json.dumps({
         "status": "SERVING",
-        "version": "v3.0-public-web",
+        "version": "v3.0.1-public-web",
         "host": host,
         "port": int(port),
         "auth_mode": service.auth_mode,
