@@ -103,12 +103,18 @@ def _upload(service, local_path: Path, folder_id: str, name: str, cfg, kind: str
     }
     if sha256:
         body["appProperties"]["sha256"] = sha256
-    media = MediaFileUpload(str(local_path), mimetype="application/octet-stream", resumable=True)
-    return service.files().create(
+    media = MediaFileUpload(
+        str(local_path), mimetype="application/octet-stream", resumable=True
+    )
+    request = service.files().create(
         body=body,
         media_body=media,
         fields="id,name,createdTime,size,appProperties",
-    ).execute()
+    )
+    response = None
+    while response is None:
+        _, response = request.next_chunk()
+    return response
 
 
 def _download(service, file_id: str, destination: Path):
