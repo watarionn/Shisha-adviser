@@ -9,7 +9,7 @@
     :root{color-scheme:dark;--bg:#0b0a0d;--panel:#151218;--soft:#1c1720;--text:#f5eff5;--muted:#b9adb9;--line:#382d3b;--accent:#edc1df;--good:#9dd9b7;font-family:Inter,system-ui,sans-serif}
     *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 90% 0,#211522 0,transparent 32%),var(--bg);color:var(--text);min-height:100vh}
     button,input{font:inherit}.shell{width:min(1180px,calc(100% - 28px));margin:auto}.top{display:flex;justify-content:space-between;align-items:center;padding:24px 0;border-bottom:1px solid var(--line)}
-    .brand{font-weight:850;letter-spacing:-.03em}.badge{font-size:.72rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 9px;margin-left:8px}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:9px 14px;border-radius:999px;cursor:pointer}
+    .brand{font-weight:850;letter-spacing:-.03em}.badge{font-size:.72rem;color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:5px 9px;margin-left:8px}.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);padding:9px 14px;border-radius:999px;cursor:pointer}.top-actions{display:flex;gap:8px;align-items:center}.about-dialog{width:min(620px,calc(100% - 28px));border:1px solid var(--line);border-radius:20px;background:var(--panel);color:var(--text);padding:0;box-shadow:0 24px 80px #0008}.about-dialog::backdrop{background:#08060aaa;backdrop-filter:blur(5px)}.about-inner{padding:26px}.about-inner h2{margin:6px 0 14px;font-size:1.55rem}.about-inner p{color:var(--muted);line-height:1.75}.about-inner ul{color:var(--muted);line-height:1.8;padding-left:1.3rem}.about-close{margin-top:10px}
     .layout{display:grid;grid-template-columns:330px 1fr;gap:26px;padding:34px 0 56px}.side,.chat{border:1px solid var(--line);background:rgba(21,18,24,.92);border-radius:22px}.side{padding:28px;height:max-content;position:sticky;top:20px}
     .eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.16em;color:var(--accent)}h1{font-size:clamp(2.5rem,6vw,4.5rem);line-height:.98;letter-spacing:-.06em;margin:12px 0 20px}.side p{color:var(--muted);line-height:1.75}.notes{font-size:.82rem;padding-top:18px;border-top:1px solid var(--line)}
     .chat{min-height:680px;display:flex;flex-direction:column;overflow:hidden}.chat-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}.dot{width:8px;height:8px;border-radius:50%;background:var(--good)}.status{color:var(--muted);font-size:.84rem}
@@ -25,9 +25,9 @@
 <body>
   <div class="shell top">
     <div class="brand">Shisha Advisor <span class="badge">PUBLIC BETA</span></div>
-    <button id="newSession" class="ghost" type="button">新しい相談</button>
+    <div class="top-actions"><button id="aboutButton" class="ghost" type="button">どんなページ？</button><button id="newSession" class="ghost" type="button">新しい相談</button></div>
   </div>
-  <main class="shell layout">
+  <dialog id="aboutDialog" class="about-dialog"><div class="about-inner"><div class="eyebrow">ABOUT</div><h2>シーシャアドバイザーについて</h2><p>好みを文章で伝えると、フレーバーの特徴データをもとに単品やミックス候補を整理する相談ツールです。</p><ul><li>甘さ・酸味・清涼感・香りなどを自然な言葉で指定できます。</li><li>苦手な味や「ミントなし」などの条件も相談できます。</li><li>候補は収録済みのフレーバーデータと推薦ロジックから提示します。</li></ul><p>公開ベータでは匿名ゲストとして利用できます。提示内容は嗜好の整理を助ける参考情報で、健康上の安全性を保証するものではありません。</p><button id="aboutClose" class="ghost about-close" type="button">閉じる</button></div></dialog>\n  <main class="shell layout">
     <aside class="side">
       <div class="eyebrow">FLAVOR ASSISTANT</div>
       <h1>好みを、言葉から探す。</h1>
@@ -213,7 +213,7 @@
       }finally{sendBtn.disabled=false; input.focus()}
     }
 
-    document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();sendText(input.value)});
+    const aboutDialog=document.getElementById('aboutDialog');\n    document.getElementById('aboutButton').addEventListener('click',()=>aboutDialog.showModal());\n    document.getElementById('aboutClose').addEventListener('click',()=>aboutDialog.close());\n    aboutDialog.addEventListener('click',e=>{if(e.target===aboutDialog)aboutDialog.close()});\n\n    document.getElementById('composer').addEventListener('submit',e=>{e.preventDefault();sendText(input.value)});
     document.querySelectorAll('[data-prompt]').forEach(btn=>btn.addEventListener('click',()=>sendText(btn.dataset.prompt)));
     document.getElementById('newSession').addEventListener('click',async()=>{
       sessionId=''; etag=''; messages.replaceChildren();
